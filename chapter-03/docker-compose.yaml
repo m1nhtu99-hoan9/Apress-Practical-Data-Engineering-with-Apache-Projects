@@ -19,14 +19,24 @@ services:
       interval: 1s
       start_period: 60s
   spark-iceberg:
-    image: tabulario/spark-iceberg
+    image: chapter-03-spark-iceberg:latest
+    build:
+      context: .
+      dockerfile: spark/Dockerfile
     container_name: spark-iceberg
     networks:
       iceberg_net:
     depends_on:
-      - rest
-      - minio
+      data-init:
+        condition: service_completed_successfully
+      mc:
+        condition: service_completed_successfully
+      rest:
+        condition: service_started
+      minio:
+        condition: service_started
     volumes:
+      - spark_data:/home/iceberg/data
       - ./spark/scripts:/home/iceberg/pyspark/scripts
       - ./notebooks:/home/iceberg/notebooks
       - ./spark/jars:/home/iceberg/pyspark/jars
@@ -39,7 +49,17 @@ services:
       - 8080:8080
       - 10000:10000
       - 10001:10001
-    
+
+  data-init:
+    container_name: data-init
+    image: chapter-03-spark-iceberg:latest
+    entrypoint: ["/opt/spark/bin/data-init.sh"]
+    networks:
+      iceberg_net:
+    volumes:
+      - spark_data:/home/iceberg/data
+    restart: "no"
+
   rest:
     image: apache/iceberg-rest-fixture
     container_name: iceberg-rest
@@ -47,6 +67,9 @@ services:
       iceberg_net:
     ports:
       - 8181:8181
+    depends_on:
+      mc:
+        condition: service_completed_successfully
     environment:
       - AWS_ACCESS_KEY_ID=admin
       - AWS_SECRET_ACCESS_KEY=password
@@ -54,6 +77,8 @@ services:
       - CATALOG_WAREHOUSE=s3://warehouse/
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
       - CATALOG_S3_ENDPOINT=http://minio:9000
+    volumes:
+      - rest_catalog:/tmp
   minio:
     image: minio/minio
     container_name: minio
@@ -68,6 +93,8 @@ services:
     ports:
       - 9001:9001
       - 9000:9000
+    volumes:
+      - minio_data:/data
     command: ["server", "/data", "--console-address", ":9001"]
   mc:
     depends_on:
@@ -80,14 +107,20 @@ services:
       - AWS_ACCESS_KEY_ID=admin
       - AWS_SECRET_ACCESS_KEY=password
       - AWS_REGION=us-east-1
+      - RESET_WAREHOUSE_ON_STARTUP=${RESET_WAREHOUSE_ON_STARTUP:-false}
     entrypoint: |
       /bin/sh -c "
+      set -e;
       until (/usr/bin/mc alias set minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
-      /usr/bin/mc rm -r --force minio/warehouse;
-      /usr/bin/mc mb minio/warehouse;
-      /usr/bin/mc policy set public minio/warehouse;
-      tail -f /dev/null
+      if [ \"$${RESET_WAREHOUSE_ON_STARTUP}\" = \"true\" ]; then
+        echo 'RESET_WAREHOUSE_ON_STARTUP=true: removing existing warehouse bucket';
+        /usr/bin/mc rm -r --force minio/warehouse;
+      fi;
+      /usr/bin/mc mb --ignore-existing minio/warehouse;
+      /usr/bin/mc anonymous set public minio/warehouse || true;
+      echo 'Warehouse initialization completed.'
       "
+    restart: "no"
   loadgen:
     build: loadgen
     container_name: loadgen
@@ -99,3 +132,11 @@ services:
 
 networks:
   iceberg_net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1420
+
+volumes:
+  spark_data:
+  minio_data:
+  rest_catalog:
