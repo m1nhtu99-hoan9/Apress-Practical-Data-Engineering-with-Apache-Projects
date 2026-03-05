@@ -50,6 +50,12 @@ For the resource requirements, we recommend:
 - **Memory:** Minimum 8GB RAM (16GB or more recommended, especially for projects involving Apache Spark)
 - **Storage:** At least 20GB of free disk space
 
+### GOTCHA: WSL Mirrored Networking and MTU
+
+If your Docker daemon runs inside WSL Ubuntu and WSL networking is set to `mirrored`, you may hit intermittent download failures during image builds because of MTU inconsistencies (especially with `curl`).
+
+For Chapter 02 Spark image builds, the downloads in `chapter-02/spark/Dockerfile` use `wget --progress=dot:giga --tries=5 --waitretry=3 --continue` to reduce these failures.
+
 ### Project Code Repository
 
 All code for the projects discussed in this book is available in the accompanying GitHub repository.

@@ -2,13 +2,19 @@ services:
   spark-iceberg:
     # image: tabulario/spark-iceberg
     container_name: spark-iceberg
+    image: chapter-02-spark-iceberg:latest
     build: spark/
     networks:
       iceberg_net:
     depends_on:
-      - rest
-      - minio
+      data-init:
+        condition: service_completed_successfully
+      rest:
+        condition: service_started
+      minio:
+        condition: service_started
     volumes:
+      - spark_data:/home/iceberg/data
       - ./warehouse:/home/iceberg/warehouse
       - ./notebooks:/home/iceberg/notebooks/notebooks
     environment:
@@ -20,6 +26,17 @@ services:
       - 8080:8080
       - 10000:10000
       - 10001:10001
+
+  data-init:
+    container_name: data-init
+    image: chapter-02-spark-iceberg:latest
+    entrypoint: ["/opt/spark/bin/data-init.sh"]
+    networks:
+      iceberg_net:
+    volumes:
+      - spark_data:/home/iceberg/data
+    restart: "no"
+    
   rest:
     image: apache/iceberg-rest-fixture
     container_name: iceberg-rest
@@ -34,6 +51,7 @@ services:
       - CATALOG_WAREHOUSE=s3://warehouse/
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
       - CATALOG_S3_ENDPOINT=http://minio:9000
+
   minio:
     image: minio/minio
     container_name: minio
@@ -49,6 +67,7 @@ services:
       - 9001:9001
       - 9000:9000
     command: ["server", "/data", "--console-address", ":9001"]
+
   mc:
     depends_on:
       - minio
@@ -70,3 +89,9 @@ services:
       "
 networks:
   iceberg_net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1420
+
+volumes:
+  spark_data:
