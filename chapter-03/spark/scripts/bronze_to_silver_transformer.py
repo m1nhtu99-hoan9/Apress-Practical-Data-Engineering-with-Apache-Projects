@@ -10,6 +10,20 @@ spark = (
     .getOrCreate()
 )
 
+
+def ensure_columns(table_name, column_definitions):
+    existing_columns = {field.name for field in spark.table(table_name).schema}
+    missing_columns = [
+        f"{column_name} {column_type}"
+        for column_name, column_type in column_definitions
+        if column_name not in existing_columns
+    ]
+
+    if missing_columns:
+        spark.sql(
+            f"ALTER TABLE {table_name} ADD COLUMNS ({', '.join(missing_columns)})"
+        )
+
 bronze_users = spark.table("bronze.users")
 bronze_items = spark.table("bronze.items")
 bronze_purchases = spark.table("bronze.purchases")
@@ -27,7 +41,8 @@ silver_users = (
 
 silver_items = (
     bronze_items
-    .withColumn("price", 
+    .withColumn(
+        "price",
         when(col("price") < 0, lit(0)).otherwise(col("price"))
     )
     .withColumn("category", upper(col("category")))
@@ -112,8 +127,31 @@ silver_pageviews_by_items = (
 )
 
 # Write to silver.purchases Iceberg table (overwrite or append as needed)
+ensure_columns(
+    "silver.purchases_enriched",
+    [
+        ("purchase_date", "DATE"),
+        ("purchase_hour", "INT"),
+    ],
+)
+
 (
     silver_purchases
+    .select(
+        "id",
+        "user_id",
+        "item_id",
+        "quantity",
+        "purchase_price",
+        "total_price",
+        "user_email",
+        "item_name",
+        "item_category",
+        "purchase_date",
+        "purchase_hour",
+        "created_at",
+        "updated_at"
+    )
     .writeTo("silver.purchases_enriched")
     .overwritePartitions()
 )
