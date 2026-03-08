@@ -1,10 +1,12 @@
 # Practical-Data-Engineering-with-Apache-Projects
-This repository contains the source code for the book "Practical Data Engineering with Apache Projects". 
+This repository is a direct checkout of the original Apress companion codebase for *Practical Data Engineering with Apache Projects: Solving Everyday Data Challenges with Spark, Iceberg, Kafka, Flink and More* (First Edition) by Dunith Danushka. It is no longer maintained as a fork.
 
-This book is organized into three distinct parts, each focusing on different aspects of modern data engineering:
+The canonical source repository is: https://github.com/Apress/Practical-Data-Engineering-with-Apache-Projects
+
+This book is organised into three distinct parts, each focusing on different aspects of modern data engineering:
 
 ## Part 1: Foundational Data Engineering
-The first part of the book covers essential data engineering concepts and tools, including data storage in lakehouses, ETL pipelines, data visualization, and pipeline automation. 
+The first part of the book covers essential data engineering concepts and tools, including data storage in lakehouses, ETL pipelines, data visualisation, and pipeline automation. 
 
 - **Chapter 02** - You will set up an Apache Iceberg data lakehouse infrastructure from the ground up. This lakehouse provides a strong foundation for the OneShop data engineering team. You will see how they build several projects based on this infrastructure.
 - **Chapter 03** - You will model the Iceberg lakehouse (set up in Chapter 02) with Medallion architecture. You'll develop batch ETL pipelines with Apache Spark to load data into the bronze layer and transform this data for the silver layer.
@@ -58,17 +60,17 @@ For Chapter 02 Spark image builds, the downloads in `chapter-02/spark/Dockerfile
 
 ### Project Code Repository
 
-All code for the projects discussed in this book is available in the accompanying GitHub repository.
+All code for the projects discussed in this book is available in the original Apress companion GitHub repository.
 
 To clone the repository using a Git client:
 
 ```bash
-https://github.com/Apress/Practical-Data-Engineering-with-Apache-Projects
+git clone https://github.com/Apress/Practical-Data-Engineering-with-Apache-Projects.git
 ```
 
 Alternatively, you can download the code as a ZIP file.
 
-The repository is structured to optimize your learning experience, with separate folders organized by chapter. 
+The repository is structured to optimise your learning experience, with separate folders organised by chapter. 
 
 ```bash
 .
